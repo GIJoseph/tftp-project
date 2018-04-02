@@ -21,6 +21,7 @@ public class tftpclient {
 	static InetAddress InetServerAddress;
 	static DatagramPacket packetToRecieve;
 	static DatagramSocket udpPacketSender;
+	static ByteArrayOutputStream byteStream;
 	
 	public static void main(String[] args) throws IOException {
 		//String fileName = "TFTP.pdf";
@@ -30,20 +31,13 @@ public class tftpclient {
 	}
 	public static void readFile() throws IOException {
 		opcode = 1;
-		InetServerAddress = InetAddress.getByName(serverAddress);
-		udpPacketSender = new DatagramSocket();
-		byte[] packet = requestPacketByteArray(opcode, fileName);
-		packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
-		udpPacketSender.send(packetToSend);
+			InetServerAddress = InetAddress.getByName(serverAddress);
+			udpPacketSender = new DatagramSocket();
+			byte[] packet = requestPacketByteArray(opcode, fileName);
+			packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
+			udpPacketSender.send(packetToSend);
 		
-		byte[] rpacket = new byte[516];
-		packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
-		udpPacketSender.receive(packetToRecieve);
-		
-		//System.out.println(Arrays.toString(packetToRecieve.getData()));
-		sendAck(packetToRecieve.getData());
-		
-		udpPacketSender.close();
+			byteStream = recieveFile();
 	}
 	public static byte[] requestPacketByteArray(byte opcode, String fileName) {
 		String mode = "octet";
@@ -75,7 +69,18 @@ public class tftpclient {
 		packetToSend = new DatagramPacket(something, something.length, InetServerAddress, packetToRecieve.getPort());
 		udpPacketSender.send(packetToSend);
 	}
-	public void receiveFileFromServer() {
+	public static ByteArrayOutputStream recieveFile() throws IOException {
+		ByteArrayOutputStream result = new ByteArrayOutputStream();
+		do {
+			byte[] rpacket = new byte[516];
+			packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
+			udpPacketSender.receive(packetToRecieve);
 		
+			System.out.println(Arrays.toString(packetToRecieve.getData()));
+			sendAck(packetToRecieve.getData());
+			
+		}while (packetToRecieve.getLength() > 512);
+		return result;
 	}
+	
 }
