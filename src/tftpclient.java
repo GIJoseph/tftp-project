@@ -8,29 +8,44 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 public class tftpclient {
 
-	byte opcode;
-	String fileName = "beatUpSteven.txt";
-	String serverAddress = "10.19.104.44";
+	static byte opcode;
+	static String fileName = "testfile.txt";
+	static String serverAddress = "192.168.0.6";
+	static DatagramPacket packetToSend;
+	static InetAddress InetServerAddress;
+	static DatagramPacket packetToRecieve;
+	static DatagramSocket udpPacketSender;
+	
 	public static void main(String[] args) throws IOException {
 		//String fileName = "TFTP.pdf";
 		//tftpclient tFTPClientNet = new tftpclient();
+		readFile();
 		
 	}
-	public void readFile() throws IOException {
+	public static void readFile() throws IOException {
 		opcode = 1;
-		InetAddress InetServerAddress = InetAddress.getByName(serverAddress);
-		DatagramSocket udpPacketSender = new DatagramSocket();
+		InetServerAddress = InetAddress.getByName(serverAddress);
+		udpPacketSender = new DatagramSocket();
 		byte[] packet = requestPacketByteArray(opcode, fileName);
-		DatagramPacket packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
+		packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
 		udpPacketSender.send(packetToSend);
 		
+		byte[] rpacket = new byte[516];
+		packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
+		udpPacketSender.receive(packetToRecieve);
 		
-		udpPacketSender.get
+		//System.out.println(Arrays.toString(packetToRecieve.getData()));
+		sendAck(packetToRecieve.getData());
+		
+		udpPacketSender.close();
 	}
-	public byte[] requestPacketByteArray(byte opcode, String fileName) {
+	public static byte[] requestPacketByteArray(byte opcode, String fileName) {
 		String mode = "octet";
 		byte[] result = new byte[2 + fileName.length() + 1 + mode.length() + 1];
 		int i = 0;
@@ -42,11 +57,25 @@ public class tftpclient {
 			result[i] = (byte) fileName.charAt(k);
 		}
 		result[i] = 0;
-		for (int k = 0; k < mode.length(); k++,i++) {
+		i++;
+		for (int k = 0; k < mode.length(); k++,i++)
 			result[i] = (byte) mode.charAt(k);
-		}
-		result[i] = 0;
 		
+		result[i] = 0;
+		i++;
 		return result;
+	}
+	public static void sendAck(byte[] blockNum) throws IOException {
+		byte[] something = new byte[4];
+		something[0] = 0;
+		something[1] = 4;
+		something[2] = blockNum[2];
+		something[3] = blockNum[3];
+		
+		packetToSend = new DatagramPacket(something, something.length, InetServerAddress, packetToRecieve.getPort());
+		udpPacketSender.send(packetToSend);
+	}
+	public void receiveFileFromServer() {
+		
 	}
 }
