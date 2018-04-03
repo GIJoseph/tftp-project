@@ -1,7 +1,10 @@
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -15,7 +18,7 @@ import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 public class tftpclient {
 
 	static byte opcode;
-	static String fileName = "testfile.txt";
+	static String fileName = "testfil.txt";
 	static String serverAddress = "192.168.0.6";
 	static DatagramPacket packetToSend;
 	static InetAddress InetServerAddress;
@@ -26,18 +29,51 @@ public class tftpclient {
 	public static void main(String[] args) throws IOException {
 		//String fileName = "TFTP.pdf";
 		//tftpclient tFTPClientNet = new tftpclient();
-		readFile();
+		InetServerAddress = InetAddress.getByName(serverAddress);
+		udpPacketSender = new DatagramSocket();
+		//readFile();
+		writeFile();
 		
+	}
+	public static void writeFile() throws IOException{
+		opcode = 2;
+		byte[] packet =  requestPacketByteArray(opcode, fileName);
+		packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
+		udpPacketSender.send(packetToSend);
+		
+		InputStream inputStream = new FileInputStream(fileName);
+		System.out.println(inputStream.available());
+		
+		while (inputStream.available() > 0) {
+			recieveAck();
+			opcode = 3;
+			byte[] tempByteArray = new byte[4 + Math.min(512, inputStream.available())];
+			
+			tempByteArray =  makeDataPacket(tempByteArray.length, packetToRecieve.getData());
+			inputStream.read(tempByteArray, 4, tempByteArray.length - 4);
+			packetToSend = new DatagramPacket(tempByteArray, tempByteArray.length, InetServerAddress, packetToRecieve.getPort());
+			udpPacketSender.send(packetToSend);
+			System.out.println(inputStream.available());
+		}
+	}
+	public static void recieveAck() throws IOException {
+		byte[] rpacket = new byte[516];
+		packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
+		udpPacketSender.receive(packetToRecieve);
+		if (packetToRecieve.getData()[1] == 5)
+		{
+			showError();
+		}
 	}
 	public static void readFile() throws IOException {
 		opcode = 1;
-			InetServerAddress = InetAddress.getByName(serverAddress);
-			udpPacketSender = new DatagramSocket();
-			byte[] packet = requestPacketByteArray(opcode, fileName);
-			packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
-			udpPacketSender.send(packetToSend);
+		byte[] packet =  requestPacketByteArray(opcode, fileName);
+		packetToSend = new DatagramPacket(packet, packet.length, InetServerAddress, 69);
+		udpPacketSender.send(packetToSend);
 		
-			byteStream = recieveFile();
+		byteStream = recieveFile();
+		OutputStream outputStream = new FileOutputStream(fileName);
+		byteStream.writeTo(outputStream);
 	}
 	public static byte[] requestPacketByteArray(byte opcode, String fileName) {
 		String mode = "octet";
@@ -59,6 +95,25 @@ public class tftpclient {
 		i++;
 		return result;
 	}
+	public static byte[] makeDataPacket(int dataSize, byte[] blockNum) {
+		byte[] result = new byte[dataSize];
+		blockNum = incrementBlock(blockNum);
+		int i = 0;
+		
+		result[i] = 0;
+		i++;
+		
+		result[i] = 3;
+		i++;
+		
+		result[i] = blockNum[0];
+		i++;
+		
+		result[i] = blockNum[1];
+		i++;
+		
+		return result;
+	}
 	public static void sendAck(byte[] blockNum) throws IOException {
 		byte[] something = new byte[4];
 		something[0] = 0;
@@ -75,12 +130,44 @@ public class tftpclient {
 			byte[] rpacket = new byte[516];
 			packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
 			udpPacketSender.receive(packetToRecieve);
-		
-			System.out.println(Arrays.toString(packetToRecieve.getData()));
-			sendAck(packetToRecieve.getData());
 			
+			
+			if(packetToRecieve.getData()[1] == 5) {
+				//System.out.println("Error Code: " + packetToRecieve.getData()[3]);
+				showError();
+			}
+			else if(packetToRecieve.getData()[1] == 3){
+				DataOutputStream dataOutputStream = new DataOutputStream(result);
+				//dataOutputStream.write(packetToRecieve.getData());
+				dataOutputStream.write(packetToRecieve.getData(), 4, packetToRecieve.getLength() - 4);
+				System.out.println(Arrays.toString(packetToRecieve.getData()));
+				sendAck(packetToRecieve.getData());
+			}
 		}while (packetToRecieve.getLength() > 512);
 		return result;
+	}
+	public static byte[] incrementBlock(byte[] currentBlock) {
+		byte[] result = new byte[2];
+		currentBlock[3]++;
+		if(currentBlock[3] < 0) {
+			currentBlock[2]++;
+			currentBlock[3] = 0;
+		}
+		result[0] = currentBlock[2];
+		result[1] = currentBlock[3];
+		return result;
+	}
+	public static void showError() {
+		switch(packetToRecieve.getData()[3]) {
+		case 0:System.out.println("Not defined, see error message (if any).");break;
+		case 1:System.out.println("File not found.");break;
+		case 2:System.out.println("Access violation.");break;
+		case 3:System.out.println("Disk full or allocation exceeded.");break;
+		case 4:System.out.println("Illegal TFTP operation.");break;
+		case 5:System.out.println("Unknown transfer ID.");break;
+		case 6:System.out.println("File already exists.");break;
+		case 7:System.out.println("No such user.");break;
+		}
 	}
 	
 }
