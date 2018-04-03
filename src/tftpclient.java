@@ -25,9 +25,11 @@ public class tftpclient {
 	static DatagramPacket packetToRecieve;
 	static DatagramSocket udpPacketSender;
 	static ByteArrayOutputStream byteStream;
+	static Boolean noError;
 	
 	public static void main(String[] args) throws IOException {
 		//String fileName = "TFTP.pdf";
+		noError = true;
 		//tftpclient tFTPClientNet = new tftpclient();
 		InetServerAddress = InetAddress.getByName(serverAddress);
 		udpPacketSender = new DatagramSocket();
@@ -44,7 +46,7 @@ public class tftpclient {
 		InputStream inputStream = new FileInputStream(fileName);
 		System.out.println(inputStream.available());
 		
-		while (inputStream.available() > 0) {
+		while (inputStream.available() > 0 && noError) {
 			recieveAck();
 			opcode = 3;
 			byte[] tempByteArray = new byte[4 + Math.min(512, inputStream.available())];
@@ -54,16 +56,17 @@ public class tftpclient {
 			packetToSend = new DatagramPacket(tempByteArray, tempByteArray.length, InetServerAddress, packetToRecieve.getPort());
 			udpPacketSender.send(packetToSend);
 			System.out.println(inputStream.available());
+			if (packetToRecieve.getData()[1] == 5)
+			{
+				showError();
+				noError = false;
+			}
 		}
 	}
 	public static void recieveAck() throws IOException {
 		byte[] rpacket = new byte[516];
 		packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
 		udpPacketSender.receive(packetToRecieve);
-		if (packetToRecieve.getData()[1] == 5)
-		{
-			showError();
-		}
 	}
 	public static void readFile() throws IOException {
 		opcode = 1;
@@ -135,6 +138,7 @@ public class tftpclient {
 			if(packetToRecieve.getData()[1] == 5) {
 				//System.out.println("Error Code: " + packetToRecieve.getData()[3]);
 				showError();
+				noError = false;
 			}
 			else if(packetToRecieve.getData()[1] == 3){
 				DataOutputStream dataOutputStream = new DataOutputStream(result);
@@ -143,7 +147,7 @@ public class tftpclient {
 				System.out.println(Arrays.toString(packetToRecieve.getData()));
 				sendAck(packetToRecieve.getData());
 			}
-		}while (packetToRecieve.getLength() > 512);
+		}while (packetToRecieve.getLength() > 512 && noError);
 		return result;
 	}
 	public static byte[] incrementBlock(byte[] currentBlock) {
