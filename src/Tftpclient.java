@@ -15,11 +15,11 @@ import java.util.Arrays;
 
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
-public class tftpclient {
+public class Tftpclient {
 
 	static byte opcode;
 	static String fileName = "testfil.txt";
-	static String serverAddress = "192.168.0.6";
+	static String serverAddress = "10.19.1.245";
 	static DatagramPacket packetToSend;
 	static InetAddress InetServerAddress;
 	static DatagramPacket packetToRecieve;
@@ -62,6 +62,7 @@ public class tftpclient {
 				noError = false;
 			}
 		}
+		inputStream.close();
 	}
 	public static void recieveAck() throws IOException {
 		byte[] rpacket = new byte[516];
@@ -77,6 +78,7 @@ public class tftpclient {
 		byteStream = recieveFile();
 		OutputStream outputStream = new FileOutputStream(fileName);
 		byteStream.writeTo(outputStream);
+		byteStream.close();
 	}
 	public static byte[] requestPacketByteArray(byte opcode, String fileName) {
 		String mode = "octet";
@@ -171,6 +173,7 @@ public class tftpclient {
 		case 5:System.out.println("Unknown transfer ID.");break;
 		case 6:System.out.println("File already exists.");break;
 		case 7:System.out.println("No such user.");break;
+		default: break;
 		}
 	}
 	
