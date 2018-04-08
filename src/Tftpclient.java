@@ -12,29 +12,36 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Scanner;
 
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 public class Tftpclient {
 
 	static byte opcode;
-	static String fileName = "testfil.txt";
-	static String serverAddress = "10.19.1.245";
+	static String fileName = "testfile.txt";
+	static String serverAddress = "192.168.1.25";
 	static DatagramPacket packetToSend;
 	static InetAddress InetServerAddress;
 	static DatagramPacket packetToRecieve;
 	static DatagramSocket udpPacketSender;
 	static ByteArrayOutputStream byteStream;
 	static Boolean noError;
+	static String mode;
 	
 	public static void main(String[] args) throws IOException {
-		//String fileName = "TFTP.pdf";
 		noError = true;
-		//tftpclient tFTPClientNet = new tftpclient();
+		mode = "octet";
 		InetServerAddress = InetAddress.getByName(serverAddress);
 		udpPacketSender = new DatagramSocket();
-		//readFile();
-		writeFile();
+		Scanner scan = new Scanner(System.in);
+		System.out.println("What would you like to do? \n 1) Read File \n 2) Write File");
+		int choice = scan.nextInt();
+		switch (choice) {
+		case 1:readFile();break;
+		case 2:writeFile();break;
+		default: break;
+		}
 		
 	}
 	public static void writeFile() throws IOException{
@@ -81,7 +88,6 @@ public class Tftpclient {
 		byteStream.close();
 	}
 	public static byte[] requestPacketByteArray(byte opcode, String fileName) {
-		String mode = "octet";
 		byte[] result = new byte[2 + fileName.length() + 1 + mode.length() + 1];
 		int i = 0;
 		result[i] = 0;
