@@ -11,7 +11,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
@@ -20,7 +22,7 @@ public class Tftpclient {
 
 	static byte opcode;
 	static String fileName = "testfile.txt";
-	static String serverAddress = "10.19.96.22";
+	static String serverAddress = "10.19.80.42";
 	static DatagramPacket packetToSend;
 	static InetAddress InetServerAddress;
 	static DatagramPacket packetToRecieve;
@@ -31,7 +33,7 @@ public class Tftpclient {
 	
 	public static void main(String[] args) throws IOException {
 		noError = true;
-		mode = "netascii";
+		mode = "octet";
 		InetServerAddress = InetAddress.getByName(serverAddress);
 		udpPacketSender = new DatagramSocket();
 		Scanner scan = new Scanner(System.in);
@@ -115,6 +117,20 @@ public class Tftpclient {
 			packetToRecieve = new DatagramPacket(rpacket, rpacket.length, InetServerAddress, udpPacketSender.getLocalPort());
 			
 			udpPacketSender.receive(packetToRecieve);
+			ArrayList<Byte> conversionArray = new ArrayList<Byte> ();
+			int numOfConversion = 0;
+			for (int i = 0; i < packetToRecieve.getLength(); i++) {
+				byte[] tempArray = packetToRecieve.getData();
+				if (i > 3 && tempArray[i] == 10 && tempArray[i-1] != 13) {
+					conversionArray.add((byte)13);
+					numOfConversion++;
+				}
+				conversionArray.add(tempArray[i]);
+			}
+			byte[] arrayToWriteBack = new byte[conversionArray.size()];
+			for (int i = 0; i < conversionArray.size(); i++) {
+				arrayToWriteBack[i] = conversionArray.get(i);
+			}
 			
 			if(packetToRecieve.getData()[1] == 5) {
 				//System.out.println("Error Code: " + packetToRecieve.getData()[3]);
@@ -123,8 +139,9 @@ public class Tftpclient {
 			}
 			else if(packetToRecieve.getData()[1] == 3){
 				DataOutputStream dataOutputStream = new DataOutputStream(result);
-				//dataOutputStream.write(packetToRecieve.getData());
-				dataOutputStream.write(packetToRecieve.getData(), 4, packetToRecieve.getLength() - 4);
+				//dataOutputStream.write(packetToRecieve.getData());                                                                  
+				dataOutputStream.write(arrayToWriteBack, 4, arrayToWriteBack.length - 4);
+				System.out.println(Arrays.toString(arrayToWriteBack));
 				System.out.println(Arrays.toString(packetToRecieve.getData()));
 				sendAck(packetToRecieve.getData());
 			}
@@ -146,8 +163,13 @@ public class Tftpclient {
 			byte[] tempByteArray = new byte[4 + Math.min(512, inputStream.available())];
 			
 			tempByteArray =  makeDataPacket(tempByteArray.length, packetToRecieve.getData());
+			for (int i = 4; i < tempByteArray.length; i++) {
+				int temp = inputStream.read();
+				
+				tempByteArray[i] = (byte) temp;
+			}
 			
-			inputStream.read(tempByteArray, 4, tempByteArray.length - 4);
+			//inputStream.read(tempByteArray, 4, tempByteArray.length - 4);
 			packetToSend = new DatagramPacket(tempByteArray, tempByteArray.length, InetServerAddress, packetToRecieve.getPort());
 			udpPacketSender.send(packetToSend);
 			System.out.println(inputStream.available());
