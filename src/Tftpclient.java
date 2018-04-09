@@ -22,7 +22,7 @@ public class Tftpclient {
 
 	static byte opcode;
 	static String fileName = "testfile.txt";
-	static String serverAddress = "10.19.80.42";
+	static String serverAddress = "10.19.86.118";
 	static DatagramPacket packetToSend;
 	static InetAddress InetServerAddress;
 	static DatagramPacket packetToRecieve;
@@ -142,7 +142,7 @@ public class Tftpclient {
 				//dataOutputStream.write(packetToRecieve.getData());                                                                  
 				dataOutputStream.write(arrayToWriteBack, 4, arrayToWriteBack.length - 4);
 				System.out.println(Arrays.toString(arrayToWriteBack));
-				System.out.println(Arrays.toString(packetToRecieve.getData()));
+				//System.out.println(Arrays.toString(packetToRecieve.getData()));
 				sendAck(packetToRecieve.getData());
 			}
 		}while (packetToRecieve.getLength() > 512 && noError);
